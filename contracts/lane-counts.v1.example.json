@@ -1,0 +1,9 @@
+{
+  "schema": "lane-counts/v1",
+  "segments": [
+    {"id": "osm:way/4021", "geometry": [[52.0901, 5.0400], [52.0902, 5.0512], [52.0903, 5.0631]], "lanes": 3},
+    {"id": "osm:way/4022", "geometry": [[52.0880, 5.0350], [52.0895, 5.0400]], "lanes": 1},
+    {"id": "osm:way/7710:b", "geometry": [[52.2310, 4.8250], [52.2300, 4.8100]], "lanes": 2}
+  ],
+  "tiles": {"cached": 3, "fetched": 1, "failed": 0}
+}

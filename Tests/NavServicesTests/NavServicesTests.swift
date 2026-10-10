@@ -335,3 +335,28 @@ final class GuidancePhrasingTests: XCTestCase {
         XCTAssertEqual(GuidancePhrasing.upcomingLimit(s), "19:00 起 130")
     }
 }
+
+final class LaneCountClientTests: XCTestCase {
+    func testContractAndURL() async throws {
+        let data = try Data(contentsOf: contracts.appendingPathComponent("lane-counts.v1.example.json"))
+        let http = FakeHTTP { _ in (data, 200) }
+        let client = LaneCountClient(baseURL: URL(string: "https://relay.example/")!, http: http)
+        let page = try await client.fetch(bbox: BoundingBox(minLatitude: 52, minLongitude: 4.9, maxLatitude: 52.3, maxLongitude: 5.2))
+        XCTAssertEqual(http.requests.first?.absoluteString, "https://relay.example/v1/lanes?bbox=52.00000,4.90000,52.30000,5.20000")
+        XCTAssertEqual(page.segments.count, 3)
+        XCTAssertEqual(page.segments[0].lanes, 3)
+        XCTAssertEqual(page.segments[0].geometry.count, 3)
+        XCTAssertEqual(page.segments[0].geometry[0].latitude, 52.0901, accuracy: 1e-9)
+        XCTAssertEqual(page.tiles?.failed, 0)
+    }
+}
+
+final class LanePhrasingTests: XCTestCase {
+    func testLaneTexts() {
+        XCTAssertEqual(GuidancePhrasing.laneChange(LaneChangeAdvice(direction: .right, lanes: 1, within: 1_234)),
+                       "向右变道 1 条（1.2 公里内）")
+        XCTAssertEqual(GuidancePhrasing.laneChange(LaneChangeAdvice(direction: .left, lanes: 2, within: 640)),
+                       "向左变道 2 条（650 米内）")
+        XCTAssertEqual(GuidancePhrasing.currentLane(LaneEstimate(lane: 1, laneCount: 3, confidence: 0.9)), "左起第 2 条，共 3 条")
+    }
+}

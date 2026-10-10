@@ -2,12 +2,13 @@
 //
 // LaneGuidance → 一张车道条图片（用于 CPManeuver.junctionImage 和底图顶部）。
 // 推荐车道：白色箭头、高亮推荐方向；其他车道：灰色；红叉关闭的车道：红色 ✕。
+// 估计出当前车道时，在那条车道底部画一个车标（只在把握足够、且车道数对得上时由调用方传入）。
 
 import NavCore
 import UIKit
 
 enum LaneStripRenderer {
-    static func image(_ g: LaneGuidance, height: CGFloat) -> UIImage {
+    static func image(_ g: LaneGuidance, height: CGFloat, currentLane: Int? = nil) -> UIImage {
         let laneWidth = height * 0.8
         let size = CGSize(width: laneWidth * CGFloat(g.lanes.count), height: height)
         return UIGraphicsImageRenderer(size: size).image { ctx in
@@ -20,6 +21,11 @@ enum LaneStripRenderer {
                     ctx.fill(CGRect(x: cell.minX - 0.5, y: height * 0.15, width: 1, height: height * 0.7))
                 }
                 draw(lane, in: cell.insetBy(dx: laneWidth * 0.15, dy: height * 0.15))
+                if i == currentLane {
+                    UIColor.systemBlue.setFill()
+                    UIBezierPath(roundedRect: CGRect(x: cell.minX + laneWidth * 0.2, y: height - 5,
+                                                     width: laneWidth * 0.6, height: 4), cornerRadius: 2).fill()
+                }
             }
         }
     }

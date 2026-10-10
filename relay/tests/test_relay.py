@@ -221,3 +221,73 @@ def test_http_errors_and_health(server):
     assert e.value.code == 400
     status, health = get(base + "/healthz")
     assert status == 200 and health["ok"] and health["feeds"]["incidents"]["stale"] is False
+
+
+# ---------------------------------------------------------------- 车道数（OSM）
+
+from ndw_relay.lanes import LaneService, segments_from_overpass, tiles_for  # noqa: E402
+
+LANES_CONTRACT = Path(__file__).resolve().parents[2] / "contracts" / "lane-counts.v1.example.json"
+
+
+def overpass_fixture() -> dict:
+    return json.loads((FIXTURES / "overpass_lanes.json").read_text())
+
+
+def test_overpass_segments_follow_travel_direction():
+    segs = {s["id"]: s for s in segments_from_overpass(overpass_fixture())}
+    assert segs["osm:way/4021"]["lanes"] == 3, "motorway is implicitly one-way"
+    assert segs["osm:way/4022"]["lanes"] == 1, "so is motorway_link (the ramp anchor)"
+    assert segs["osm:way/5000"]["geometry"][0] == [52.101, 5.11], "oneway=-1 → geometry reversed"
+    assert segs["osm:way/7710:f"]["geometry"][0] == [52.23, 4.81]
+    assert segs["osm:way/7710:b"]["geometry"][0] == [52.231, 4.825] and segs["osm:way/7710:b"]["lanes"] == 2
+    assert "osm:way/7711" not in segs and not any(k.startswith("osm:way/7711") for k in segs), \
+        "two-way road without lanes:forward/backward is ambiguous → skipped"
+    assert segs["osm:way/7712"]["lanes"] == 2
+    assert not any(k.startswith("osm:way/7713") for k in segs)
+
+
+def test_lane_tiles_cached_and_failures_reported():
+    calls = []
+
+    def fetch(tile):
+        calls.append(tile)
+        if tile == (208, 20):
+            raise TimeoutError("overpass busy")
+        return overpass_fixture()
+
+    now = [1000.0]
+    svc = LaneService(fetch=fetch, clock=lambda: now[0], ttl_s=60)
+    bbox = (52.0, 4.9, 52.3, 5.2)
+    assert len(tiles_for(bbox)) == 4
+    first = svc.query(bbox)
+    assert first["tiles"] == {"cached": 0, "fetched": 3, "failed": 1}
+    assert len({s["id"] for s in first["segments"]}) == len(first["segments"]), "one entry per way across tiles"
+    second = svc.query(bbox)
+    assert second["tiles"]["cached"] == 3 and len(calls) == 5, "only the failed tile is retried"
+    now[0] += 120
+    svc.query(bbox)
+    assert len(calls) == 9, "expired tiles are fetched again"
+    with pytest.raises(ValueError):
+        svc.query((50.0, 3.0, 54.0, 8.0))
+
+
+def test_http_lanes_match_contract():
+    store = EventStore(clock=lambda: NOW)
+    svc = LaneService(fetch=lambda tile: overpass_fixture())
+    srv = make_server(store, "127.0.0.1", 0, lanes=svc)
+    t = threading.Thread(target=srv.serve_forever, daemon=True)
+    t.start()
+    try:
+        base = f"http://127.0.0.1:{srv.server_address[1]}"
+        status, page = get(base + "/v1/lanes?bbox=52.0,4.9,52.3,5.2")
+        assert status == 200
+        contract = json.loads(LANES_CONTRACT.read_text())
+        assert set(contract) <= set(page)
+        for seg in page["segments"]:
+            assert set(seg) == set(contract["segments"][0])
+        with pytest.raises(urllib.error.HTTPError) as e:
+            get(base + "/v1/lanes")
+        assert e.value.code == 400
+    finally:
+        srv.shutdown()

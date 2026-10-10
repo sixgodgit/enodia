@@ -114,6 +114,8 @@ public struct SegmentProjection: Sendable, Equatable {
     public var distance: Double
     /// 线段长度（米，局部平面）。
     public var length: Double
+    /// 带符号的横向距离：在线段行进方向右侧为正、左侧为负（车道判断要用）。
+    public var side: Double
 }
 
 extension LocalFrame {
@@ -125,12 +127,17 @@ extension LocalFrame {
         let dx = bx - ax, dy = by - ay
         let len2 = dx * dx + dy * dy
         guard len2 > 1e-9 else {
-            return SegmentProjection(t: 0, distance: (ax * ax + ay * ay).squareRoot(), length: 0)
+            let d = (ax * ax + ay * ay).squareRoot()
+            return SegmentProjection(t: 0, distance: d, length: 0, side: d)
         }
         var t = -(ax * dx + ay * dy) / len2
         t = min(1, max(minT, t))
         let px = ax + t * dx, py = ay + t * dy
-        return SegmentProjection(t: t, distance: (px * px + py * py).squareRoot(), length: len2.squareRoot())
+        let distance = (px * px + py * py).squareRoot()
+        // 原点相对 a 的向量 (-ax, -ay) 与线段方向的叉积：> 0 在左侧（东-北坐标系）。
+        let cross = dx * (-ay) - dy * (-ax)
+        return SegmentProjection(t: t, distance: distance, length: len2.squareRoot(),
+                                 side: cross > 0 ? -distance : distance)
     }
 }
 

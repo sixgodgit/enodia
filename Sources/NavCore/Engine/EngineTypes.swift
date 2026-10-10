@@ -147,6 +147,12 @@ public struct EngineConfig: Sendable {
     // NDW 封路
     public var avoidBlockingEventsWithin = 25_000.0
 
+    // 车道定位（仅手机传感器）
+    public var laneChange = LaneChangeDetectorConfig()
+    public var laneEstimator = LaneEstimatorConfig()
+    /// 最大概率达到它才显示"当前车道"、给变道提示。
+    public var laneDisplayConfidence = 0.7
+
     public var telemetryInterval: TimeInterval = 30
     public var waypointReachedRadius = 60.0
 

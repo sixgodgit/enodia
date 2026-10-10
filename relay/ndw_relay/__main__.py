@@ -11,6 +11,7 @@ import sys
 
 from . import datex2
 from .feeds import FeedPoller, feeds_from_env
+from .lanes import LaneService
 from .server import make_server
 from .store import EventStore
 
@@ -21,6 +22,7 @@ def main(argv: list[str] | None = None) -> int:
     s = sub.add_parser("serve", help="poll NDW feeds and serve /v1/events")
     s.add_argument("--host", default="127.0.0.1")
     s.add_argument("--port", type=int, default=8787)
+    s.add_argument("--no-lanes", action="store_true", help="disable /v1/lanes (OSM lane counts via Overpass)")
     i = sub.add_parser("inspect", help="parse a downloaded DATEX II file and report coverage")
     i.add_argument("path")
     i.add_argument("--source", default="ndw:file")
@@ -39,7 +41,7 @@ def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     store = EventStore()
     FeedPoller(store, feeds_from_env()).start()
-    server = make_server(store, args.host, args.port)
+    server = make_server(store, args.host, args.port, lanes=None if args.no_lanes else LaneService())
     logging.info("serving on http://%s:%d/v1/events", args.host, args.port)
     try:
         server.serve_forever()

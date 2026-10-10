@@ -17,6 +17,35 @@ public struct SpeedLimitSegment: Sendable, Equatable, Codable {
     }
 }
 
+/// 一段路在行驶方向上的车道数（OSM `lanes` / RWS 道路特征库，经中继下发）。几何按行驶方向排列。
+public struct LaneCountSegment: Sendable, Equatable, Codable {
+    public var id: String
+    public var geometry: [Coordinate]
+    public var lanes: Int
+
+    public init(id: String, geometry: [Coordinate], lanes: Int) {
+        self.id = id
+        self.geometry = geometry
+        self.lanes = lanes
+    }
+
+    enum CodingKeys: String, CodingKey { case id, geometry, lanes }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        lanes = try c.decode(Int.self, forKey: .lanes)
+        geometry = try c.decode([[Double]].self, forKey: .geometry).compactMap { $0.count == 2 ? Coordinate($0[0], $0[1]) : nil }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(lanes, forKey: .lanes)
+        try c.encode(geometry.map { [$0.latitude, $0.longitude] }, forKey: .geometry)
+    }
+}
+
 public struct RouteEvent: Sendable, Equatable {
     public var event: TrafficEvent
     public var startOffset: Double
@@ -45,14 +74,17 @@ public struct RouteAnnotations: Sendable {
     public var speedLimits: [RouteSpeedLimit]
     /// 按 offset 升序。
     public var gantries: [RouteGantry]
+    /// 沿路线的车道数，按 start 升序、互不重叠。
+    public var laneCounts: [ValueSpan<Int>]
     public var generatedAt: Date
 
     public init(routeID: RouteID, events: [RouteEvent] = [], speedLimits: [RouteSpeedLimit] = [],
-                gantries: [RouteGantry] = [], generatedAt: Date) {
+                gantries: [RouteGantry] = [], laneCounts: [ValueSpan<Int>] = [], generatedAt: Date) {
         self.routeID = routeID
         self.events = events.sorted { $0.startOffset < $1.startOffset }
         self.speedLimits = speedLimits.sorted { $0.start < $1.start }
         self.gantries = gantries.sorted { $0.offset < $1.offset }
+        self.laneCounts = laneCounts.sorted { $0.start < $1.start }
         self.generatedAt = generatedAt
     }
 }
@@ -73,13 +105,38 @@ public struct RouteAnnotator: Sendable {
     public init() {}
 
     public func annotate(route: Route, events: [TrafficEvent] = [], speedLimits: [SpeedLimitSegment] = [],
-                         gantries: [SignalGantry] = [], now: Date) -> RouteAnnotations {
+                         gantries: [SignalGantry] = [], laneCounts: [LaneCountSegment] = [],
+                         now: Date) -> RouteAnnotations {
         RouteAnnotations(
             routeID: route.id,
             events: events.filter { $0.isActive(at: now) }.compactMap { project($0, onto: route) },
             speedLimits: speedLimits.compactMap { project($0, onto: route) },
             gantries: gantries.compactMap { project($0, onto: route) },
+            laneCounts: project(laneCounts, onto: route),
             generatedAt: now)
+    }
+
+    /// 车道数段 → 路线上互不重叠的区间（方向必须一致；重叠时后开始的覆盖先开始的）。
+    func project(_ segments: [LaneCountSegment], onto route: Route) -> [ValueSpan<Int>] {
+        let spans = segments.compactMap { seg -> ValueSpan<Int>? in
+            guard seg.lanes >= 1, seg.geometry.count >= 2, let span = projectLinear(seg.geometry, onto: route),
+                  span.end > span.start else { return nil }
+            return ValueSpan(start: span.start, end: span.end, value: seg.lanes)
+        }.sorted { $0.start < $1.start }
+        var out: [ValueSpan<Int>] = []
+        for s in spans {
+            if var last = out.last, last.end > s.start {
+                last.end = s.start
+                out[out.count - 1] = last
+                if last.end <= last.start { out.removeLast() }
+            }
+            if let last = out.last, last.value == s.value, abs(last.end - s.start) < 1 {
+                out[out.count - 1].end = max(last.end, s.end)
+            } else {
+                out.append(s)
+            }
+        }
+        return out
     }
 
     func project(_ event: TrafficEvent, onto route: Route) -> RouteEvent? {

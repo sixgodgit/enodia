@@ -2,7 +2,7 @@
 //
 // CarPlay 窗口的底图 + 叠加层。叠加层只放系统模板没有的、开车时真正要看的东西：
 //   左下：限速牌（荷兰样式：白底红圈黑字）+ 时段提示（"19:00 起 130"）+ 当前车速（超速变红）
-//   顶部：车道条（推荐车道白色、其余灰色、红叉车道红色）
+//   顶部：车道条（推荐车道白色、其余灰色、红叉车道红色、当前车道蓝色标记）+ 变道提示
 //   底部：前方事件一行字
 
 import AMapNaviKit
@@ -16,6 +16,7 @@ final class CarPlayMapViewController: UIViewController {
     private let speedLabel = UILabel()
     private let limitNote = UILabel()
     private let laneStrip = UIImageView()
+    private let laneAdvice = PaddedLabel()
     private let hazardLabel = PaddedLabel()
 
     override func viewDidLoad() {
@@ -26,7 +27,7 @@ final class CarPlayMapViewController: UIViewController {
         mapView.userTrackingMode = .followWithHeading
         view.addSubview(mapView)
 
-        for v in [speedSign, speedLabel, limitNote, laneStrip, hazardLabel] as [UIView] {
+        for v in [speedSign, speedLabel, limitNote, laneStrip, laneAdvice, hazardLabel] as [UIView] {
             v.translatesAutoresizingMaskIntoConstraints = false
             view.addSubview(v)
         }
@@ -34,6 +35,11 @@ final class CarPlayMapViewController: UIViewController {
         limitNote.font = .systemFont(ofSize: 12, weight: .semibold)
         limitNote.textColor = .label
         laneStrip.contentMode = .scaleAspectFit
+        laneAdvice.font = .systemFont(ofSize: 15, weight: .bold)
+        laneAdvice.textColor = .white
+        laneAdvice.backgroundColor = UIColor.systemBlue.withAlphaComponent(0.9)
+        laneAdvice.layer.cornerRadius = 8
+        laneAdvice.clipsToBounds = true
         hazardLabel.font = .systemFont(ofSize: 14, weight: .semibold)
         hazardLabel.textColor = .white
         hazardLabel.backgroundColor = UIColor.systemOrange.withAlphaComponent(0.9)
@@ -53,6 +59,8 @@ final class CarPlayMapViewController: UIViewController {
             laneStrip.centerXAnchor.constraint(equalTo: safe.centerXAnchor),
             laneStrip.topAnchor.constraint(equalTo: safe.topAnchor, constant: 8),
             laneStrip.heightAnchor.constraint(equalToConstant: 44),
+            laneAdvice.centerXAnchor.constraint(equalTo: safe.centerXAnchor),
+            laneAdvice.topAnchor.constraint(equalTo: laneStrip.bottomAnchor, constant: 6),
             hazardLabel.centerXAnchor.constraint(equalTo: safe.centerXAnchor),
             hazardLabel.bottomAnchor.constraint(equalTo: safe.bottomAnchor, constant: -12),
             hazardLabel.widthAnchor.constraint(lessThanOrEqualTo: safe.widthAnchor, multiplier: 0.6),
@@ -65,10 +73,20 @@ final class CarPlayMapViewController: UIViewController {
         limitNote.text = s.speedLimit.flatMap { GuidancePhrasing.upcomingLimit($0) }
         speedLabel.text = s.speedKmh.map(String.init)
         speedLabel.textColor = s.isSpeeding ? .systemRed : .label
-        laneStrip.image = s.lanes.map { LaneStripRenderer.image($0, height: 44) }
+        laneStrip.image = s.lanes.map { LaneStripRenderer.image($0, height: 44, currentLane: Self.markedLane(s)) }
         laneStrip.isHidden = s.lanes == nil
+        laneAdvice.text = s.laneChange.map(GuidancePhrasing.laneChange)
+        laneAdvice.isHidden = laneAdvice.text == nil
         hazardLabel.text = s.hazard.map(GuidancePhrasing.hazard) ?? s.strategyNote
         hazardLabel.isHidden = hazardLabel.text == nil
+    }
+}
+
+extension CarPlayMapViewController {
+    /// 车道图和估计的车道数一致时才标当前车道（否则左右对不上）。
+    static func markedLane(_ s: DriveDisplayState) -> Int? {
+        guard let est = s.currentLane, let g = s.lanes, g.lanes.count == est.laneCount else { return nil }
+        return est.lane
     }
 }
 

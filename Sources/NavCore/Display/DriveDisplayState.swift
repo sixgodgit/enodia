@@ -21,6 +21,10 @@ public struct DriveDisplayState: Sendable, Equatable {
     /// 紧接着的动作（两个动作挨得很近时才给，"然后左转"）。
     public var thenManeuver: ManeuverDisplay?
     public var lanes: LaneGuidance?
+    /// 估计的当前车道（只在把握足够时给；从左数，0 起）。
+    public var currentLane: LaneEstimate?
+    /// 当前车道不在推荐车道里："向右变道 1 条"。
+    public var laneChange: LaneChangeAdvice?
     public var speedLimit: FusedSpeedLimit?
     public var speedKmh: Int?
     public var isSpeeding: Bool
@@ -37,7 +41,8 @@ public struct DriveDisplayState: Sendable, Equatable {
     public var gpsDegraded: Bool
 
     public static let idle = DriveDisplayState(
-        phase: .idle, maneuver: nil, thenManeuver: nil, lanes: nil, speedLimit: nil, speedKmh: nil,
+        phase: .idle, maneuver: nil, thenManeuver: nil, lanes: nil, currentLane: nil, laneChange: nil,
+        speedLimit: nil, speedKmh: nil,
         isSpeeding: false, hazard: nil, remainingDistance: 0, remainingTime: 0, eta: nil, rejoin: nil,
         strategyNote: nil, activeRouteID: nil, gpsDegraded: false)
 }

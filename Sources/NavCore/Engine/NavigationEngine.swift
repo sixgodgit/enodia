@@ -91,12 +91,20 @@ public final class NavigationEngine: @unchecked Sendable {
     }
     private var speedMemo: SpeedMemo?
 
+    // 车道定位
+    private var laneDetector: LaneChangeDetector
+    private var laneEstimator: LaneEstimator
+    private var lastLaneUpdate: Date?
+    private var pendingMotion: [MotionSample] = []
+
     public init(config: EngineConfig = EngineConfig(), calendar: Calendar = DutchRoadRules.amsterdamCalendar) {
         self.config = config
         self.fuser = SpeedLimitFuser(calendar: calendar)
         self.gate = StrategyGate(config: config.strategy)
         self.matcher = RouteMatcher(config: config.matcher)
         self.detector = OffRouteDetector(config: config.offRoute)
+        self.laneDetector = LaneChangeDetector(config: config.laneChange)
+        self.laneEstimator = LaneEstimator(config: config.laneEstimator)
     }
 
     // MARK: - 异步入口（任何线程）
@@ -116,13 +124,15 @@ public final class NavigationEngine: @unchecked Sendable {
 
     // MARK: - 实时入口
 
-    public func process(_ fix: LocationFix) -> EngineOutput {
+    /// - Parameter motion: 上一个 GPS 点以来的陀螺仪读数（可以为空：车道定位退化为只用 GPS，把握更低）。
+    public func process(_ fix: LocationFix, motion: [MotionSample] = []) -> EngineOutput {
         let clock = ContinuousClock()
         let started = clock.now
         precondition(processingLock.try(), "NavigationEngine.process must be called from a single serial context")
         defer { processingLock.unlock() }
 
         var intents: [EngineIntent] = []
+        pendingMotion = motion
         drainInbox(fix, &intents)
         let display = step(fix, &intents)
         return EngineOutput(display: display, intents: intents, processingTime: clock.now - started)
@@ -180,6 +190,9 @@ public final class NavigationEngine: @unchecked Sendable {
         strategyNote = nil
         arrived = false
         speedMemo = nil
+        laneDetector.reset()
+        laneEstimator.reset()
+        lastLaneUpdate = nil
     }
 
     private func handle(_ offer: RouteOffer, _ fix: LocationFix, _ intents: inout [EngineIntent]) {
@@ -272,6 +285,7 @@ public final class NavigationEngine: @unchecked Sendable {
         let route = active!
         let offRoute = detector.state.isOffRoute
         let offset = (offRoute ? lastGoodMatch?.offset : currentMatch?.offset) ?? lastGoodMatch?.offset ?? 0
+        updateLanePosition(route, offRoute ? nil : currentMatch, fix)
 
         // 3. 在路线上时：预算下一个高速决策点、检查前方封路
         if !offRoute, let m = currentMatch {
@@ -295,6 +309,41 @@ public final class NavigationEngine: @unchecked Sendable {
         let display = buildDisplay(fix, r, o)
         emitTelemetryIfDue(fix, display, &intents)
         return display
+    }
+
+    // MARK: - 车道定位
+
+    private func laneCount(_ route: Route, at offset: Double) -> Int? {
+        annotations[route.id].flatMap { Route.span(in: $0.laneCounts, at: offset)?.value } ?? route.laneCount(at: offset)
+    }
+
+    private func updateLanePosition(_ route: Route, _ match: RouteMatch?, _ fix: LocationFix) {
+        defer { lastLaneUpdate = fix.timestamp }
+        guard let m = match, let n = laneCount(route, at: m.offset) else {
+            // 偏航（在另一条路上）或这段路不知道车道数：不猜。
+            laneEstimator.clear()
+            laneDetector.reset()
+            return
+        }
+        if n != laneEstimator.laneCount { laneEstimator.setLaneCount(n) }
+        let obs = laneDetector.update(fix: fix, signedLateral: m.signedLateral,
+                                      roadBearing: route.smoothedBearing(at: m.offset), motion: pendingMotion)
+        let dt = lastLaneUpdate.map { fix.timestamp.timeIntervalSince($0) } ?? 0
+        laneEstimator.diffuse(seconds: dt, ambiguity: obs.ambiguity)
+        if let event = obs.event { laneEstimator.apply(event) }
+    }
+
+    private func laneDisplay(_ guidance: LaneGuidance?, _ maneuverDistance: Double?)
+        -> (LaneEstimate?, LaneChangeAdvice?) {
+        guard let est = laneEstimator.estimate, est.laneCount > 1,
+              est.confidence >= config.laneDisplayConfidence else { return (nil, nil) }
+        // 车道图的车道数和道路车道数一致，才能左右对上（否则车道图里包含出口减速车道）。
+        guard let g = guidance, g.lanes.count == est.laneCount, let d = maneuverDistance else { return (est, nil) }
+        let recommended = g.recommendedIndices
+        guard !recommended.isEmpty, !recommended.contains(est.lane),
+              let target = recommended.min(by: { abs($0 - est.lane) < abs($1 - est.lane) }) else { return (est, nil) }
+        return (est, LaneChangeAdvice(direction: target > est.lane ? .right : .left,
+                                      lanes: abs(target - est.lane), within: d))
     }
 
     // MARK: - 第一阶段重算
@@ -379,6 +428,7 @@ public final class NavigationEngine: @unchecked Sendable {
         if laneFeed?.routeID != route.id { laneFeed = nil }
         matcher.reset()
         detector.reset()
+        laneDetector.reset()   // 横向基线是相对路线的；物理车道不变，估计器保留
         pendingRoute = nil
 
         let latency = reason == .initial ? nil : offRouteSince.map { fix.timestamp.timeIntervalSince($0) }
@@ -587,6 +637,9 @@ public final class NavigationEngine: @unchecked Sendable {
                 d.thenManeuver = maneuverDisplay(route.maneuvers[i + 1], offset)
             }
             d.lanes = lanes(route, man, offset, now, ann)
+            (d.currentLane, d.laneChange) = laneDisplay(d.lanes, man.offset - offset)
+        } else {
+            (d.currentLane, d.laneChange) = laneDisplay(nil, nil)
         }
         d.speedLimit = speedLimit(route, offset, now, ann)
         if let limit = d.speedLimit, let v = d.speedKmh {

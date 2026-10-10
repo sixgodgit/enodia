@@ -1,6 +1,6 @@
 // ⚠️ 未在本仓库 CI 中编译：需要 iOS SDK（CoreLocation）。NavCore / NavServices 部分已在 Linux 上测试。
 //
-// 宿主：把 GPS、高德、NDW 中继、JEV 接到 NavigationEngine 上。
+// 宿主：把 GPS、陀螺仪、高德、NDW 中继、JEV 接到 NavigationEngine 上。
 //
 // 三条队列，各司其职：
 //   realtime   (userInteractive, 串行)  —— 只做 engine.process，每个 GPS 点一次，毫秒级
@@ -9,6 +9,7 @@
 // 任何网络结果都只是"往引擎收件箱里放一条消息"。
 
 import CoreLocation
+import CoreMotion
 import Foundation
 import NavCore
 import NavServices
@@ -26,11 +27,15 @@ final class NavigationHost: NSObject, CLLocationManagerDelegate, @unchecked Send
     private let realtime = DispatchQueue(label: "nav.realtime", qos: .userInteractive)
     private let annotate = DispatchQueue(label: "nav.annotate", qos: .utility)
     private let location = CLLocationManager()
+    private let motionManager = CMMotionManager()
     private let annotator = RouteAnnotator()
+    /// realtime 队列上：上一个 GPS 点以来的陀螺仪读数。
+    private var motionBuffer: [MotionSample] = []
 
     private let routing: RouteProviderRouter
     private let amapGuidance: AmapGuidanceBridge?
     private let ndw: NDWEventFeed?
+    private let laneCounts: LaneCountClient?
     private weak var jev: StrategyChannel?
 
     /// 画面输出（主线程回调）：CarPlay 和手机 UI 订阅它。
@@ -40,12 +45,16 @@ final class NavigationHost: NSObject, CLLocationManagerDelegate, @unchecked Send
     private var routesByID: [RouteID: Route] = [:]
     private var activeRouteID: RouteID?
     private var latestEvents: [TrafficEvent] = []
+    private var latestLaneCounts: [LaneCountSegment] = []
+    private var laneCountsRouteID: RouteID?
     private var ndwTask: Task<Void, Never>?
 
-    init(routing: RouteProviderRouter, amapGuidance: AmapGuidanceBridge?, ndw: NDWEventFeed?, jev: StrategyChannel?) {
+    init(routing: RouteProviderRouter, amapGuidance: AmapGuidanceBridge?, ndw: NDWEventFeed?,
+         laneCounts: LaneCountClient?, jev: StrategyChannel?) {
         self.routing = routing
         self.amapGuidance = amapGuidance
         self.ndw = ndw
+        self.laneCounts = laneCounts
         self.jev = jev
         super.init()
         location.delegate = self
@@ -69,13 +78,39 @@ final class NavigationHost: NSObject, CLLocationManagerDelegate, @unchecked Send
         location.requestWhenInUseAuthorization()
         location.allowsBackgroundLocationUpdates = true
         location.startUpdatingLocation()
+        startMotion()
     }
 
     func stop() {
         engine.endTrip()
         location.stopUpdatingLocation()
+        motionManager.stopDeviceMotionUpdates()
         amapGuidance?.stop()
         ndwTask?.cancel()
+    }
+
+    // MARK: - 陀螺仪 → 车道定位
+
+    /// 20 Hz 设备姿态。只取"绕竖直轴的角速度"：用重力方向投影，所以手机怎么摆都行（只要固定在车里）。
+    /// deviceMotion.rotationRate 已经过系统的传感器融合与零偏补偿；残余零偏由核心里的滤波器再估。
+    private func startMotion() {
+        guard motionManager.isDeviceMotionAvailable else { return }   // 没有陀螺仪：车道定位不报车道，只降低把握
+        motionManager.deviceMotionUpdateInterval = 1.0 / 20
+        let queue = OperationQueue()
+        queue.underlyingQueue = realtime
+        queue.maxConcurrentOperationCount = 1
+        let bootOffset = Date().timeIntervalSince1970 - ProcessInfo.processInfo.systemUptime
+        motionManager.startDeviceMotionUpdates(using: .xArbitraryZVertical, to: queue) { [weak self] dm, _ in
+            guard let self, let dm else { return }
+            let g = dm.gravity, r = dm.rotationRate
+            let norm = (g.x * g.x + g.y * g.y + g.z * g.z).squareRoot()
+            guard norm > 0.5 else { return }
+            // up = -gravity；绕 up 的角速度（逆时针为正）→ 航向角速度（顺时针为正，度/秒）
+            let yawUp = -(r.x * g.x + r.y * g.y + r.z * g.z) / norm
+            let headingRate = -yawUp * 180 / .pi
+            self.motionBuffer.append(MotionSample(timestamp: Date(timeIntervalSince1970: bootOffset + dm.timestamp),
+                                                  headingRate: headingRate))
+        }
     }
 
     // MARK: - GPS → 实时链路
@@ -94,7 +129,9 @@ final class NavigationHost: NSObject, CLLocationManagerDelegate, @unchecked Send
             horizontalAccuracy: l.horizontalAccuracy,
             speed: l.speed >= 0 ? l.speed : nil,
             course: l.course >= 0 && (l.courseAccuracy < 0 || l.courseAccuracy < 30) ? l.course : nil)
-        let out = engine.process(fix)
+        let motion = motionBuffer
+        motionBuffer.removeAll(keepingCapacity: true)
+        let out = engine.process(fix, motion: motion)
         for intent in out.intents { perform(intent) }
         let display = out.display
         Task { @MainActor [weak self] in self?.onDisplay?(display) }
@@ -120,6 +157,7 @@ final class NavigationHost: NSObject, CLLocationManagerDelegate, @unchecked Send
                 self.activeRouteID = change.to
                 self.reannotate()
                 self.restartNDWPolling()
+                self.fetchLaneCounts()
             }
 
         case .telemetry(let t):
@@ -155,9 +193,23 @@ final class NavigationHost: NSObject, CLLocationManagerDelegate, @unchecked Send
         }
     }
 
+    /// 沿途车道数（OSM，经中继）。每条路线取一次；取不到就没有车道定位，导航照常。
+    private func fetchLaneCounts() {
+        guard let laneCounts, let id = activeRouteID, laneCountsRouteID != id, let route = routesByID[id],
+              let box = BoundingBox(covering: route.points)?.expanded(byMeters: 500) else { return }
+        laneCountsRouteID = id
+        Task { [weak self] in
+            guard let page = try? await laneCounts.fetch(bbox: box) else { return }
+            self?.annotate.async {
+                self?.latestLaneCounts = page.segments
+                self?.reannotate()
+            }
+        }
+    }
+
     private func reannotate() {
         guard let id = activeRouteID, let route = routesByID[id] else { return }
-        let a = annotator.annotate(route: route, events: latestEvents, now: Date())
+        let a = annotator.annotate(route: route, events: latestEvents, laneCounts: latestLaneCounts, now: Date())
         engine.updateAnnotations(a)
     }
 }

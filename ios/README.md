@@ -9,7 +9,7 @@
 DutchNav/
 ├── App/
 │   ├── AppEnvironment.swift      读配置、组装 provider 和宿主
-│   └── NavigationHost.swift      GPS → engine.process（专用串行队列）；执行 intents；NDW 轮询与注释
+│   └── NavigationHost.swift      GPS + 陀螺仪 → engine.process（专用串行队列）；执行 intents；NDW 轮询、车道数与注释
 ├── Amap/
 │   ├── AmapRouteProvider.swift   calculateDriveRoute → NavCore.Route（多路线：第一条主路线，其余备选）
 │   └── AmapGuidanceBridge.swift  外部定位喂给高德会话；车道回调 → LaneFeed；高德自发重算 → .refresh
@@ -66,6 +66,8 @@ DutchNav/
 - 引擎切到非高德路线（预算/OSRM）后，高德会话会自己判定偏航并重算；那条结果以 `.refresh` 交回引擎，
   引擎在安全点采纳，之后车道信息恢复。
 - 高德在中国大陆以外不做 GCJ-02 偏移；`AmapRouteProvider` 对落在中国境内的坐标直接拒绝。
+- 车道定位用 CoreMotion 的 `deviceMotion`（20 Hz）：把角速度投影到重力方向上，得到绕竖直轴的转动，
+  所以手机怎么摆都行，但要**固定在车里**（支架或杯架），在座椅上滑来滑去会被当成转向。
 
 ## 第一次真机要核对的
 
@@ -74,3 +76,4 @@ DutchNav/
 - [ ] `AmapRouteProvider.maneuverKind`：高速出口在高德里是哪种 `iconType`
 - [ ] 高德海外数据的道路等级口径（`roadClass`）
 - [ ] 高德是否给出逐段限速；给的话填进 `providerSpeedLimits`，它会自动参与融合
+- [ ] 车道定位：`headingRate` 的正负号（右转应为正）—— 在停车场原地右转一圈，读数应持续为正

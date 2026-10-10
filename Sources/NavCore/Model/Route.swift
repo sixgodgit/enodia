@@ -129,6 +129,9 @@ public final class Route: Sendable, Identifiable {
     /// 路线服务自带的限速（km/h），按 start 升序、互不重叠。只是融合的一个来源。
     public let providerSpeedLimits: [ValueSpan<Int>]
     public let roadClasses: [ValueSpan<RoadClass>]
+    /// 行驶方向上的车道数（不含应急车道），按 start 升序、互不重叠。
+    /// 来源：OSM `lanes`、RWS 道路特征库（经中继下发）；没有就空着，车道定位只在知道车道数的地方工作。
+    public let laneCounts: [ValueSpan<Int>]
     public let createdAt: Date
     let grid: SegmentGrid
 
@@ -141,6 +144,7 @@ public final class Route: Sendable, Identifiable {
                 cumulativeTime: [Double]? = nil,
                 providerSpeedLimits: [ValueSpan<Int>] = [],
                 roadClasses: [ValueSpan<RoadClass>] = [],
+                laneCounts: [ValueSpan<Int>] = [],
                 createdAt: Date = Date()) {
         precondition(points.count >= 2, "route needs at least two points")
         let cum = cumulative ?? Route.cumulativeDistances(points)
@@ -156,6 +160,7 @@ public final class Route: Sendable, Identifiable {
         self.cumulativeTime = cumulativeTime
         self.providerSpeedLimits = providerSpeedLimits.sorted { $0.start < $1.start }
         self.roadClasses = roadClasses.sorted { $0.start < $1.start }
+        self.laneCounts = laneCounts.sorted { $0.start < $1.start }
         self.createdAt = createdAt
         self.grid = SegmentGrid(points: points)
     }
@@ -226,6 +231,17 @@ public final class Route: Sendable, Identifiable {
 
     public func providerSpeedLimit(at offset: Double) -> Int? {
         Route.span(in: providerSpeedLimits, at: offset)?.value
+    }
+
+    public func laneCount(at offset: Double) -> Int? {
+        Route.span(in: laneCounts, at: offset)?.value
+    }
+
+    /// 某里程处的道路方向，用前后 window 米的弦来算（折线顶点处不会跳变）。
+    public func smoothedBearing(at offset: Double, window: Double = 40) -> Double {
+        let a = coordinate(at: max(0, offset - window))
+        let b = coordinate(at: min(length, offset + window))
+        return Geo.distance(a, b) > 1 ? Geo.bearing(a, b) : bearing(ofSegment: segmentIndex(at: offset))
     }
 
     /// 在按 start 升序、互不重叠的 spans 里找覆盖 offset 的那段（二分）。

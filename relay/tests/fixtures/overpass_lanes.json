@@ -1,0 +1,21 @@
+{
+  "version": 0.6,
+  "generator": "Overpass API (fixture constructed by hand, not real data)",
+  "elements": [
+    {"type": "way", "id": 4021, "tags": {"highway": "motorway", "lanes": "3", "ref": "A12"},
+     "geometry": [{"lat": 52.0901, "lon": 5.0400}, {"lat": 52.0902, "lon": 5.0512}, {"lat": 52.0903, "lon": 5.0631}]},
+    {"type": "way", "id": 4022, "tags": {"highway": "motorway_link", "lanes": "1"},
+     "geometry": [{"lat": 52.0880, "lon": 5.0350}, {"lat": 52.0895, "lon": 5.0400}]},
+    {"type": "way", "id": 5000, "tags": {"highway": "trunk", "lanes": "4", "oneway": "-1"},
+     "geometry": [{"lat": 52.1000, "lon": 5.1000}, {"lat": 52.1010, "lon": 5.1100}]},
+    {"type": "way", "id": 7710, "tags": {"highway": "trunk", "lanes": "4", "lanes:forward": "2", "lanes:backward": "2"},
+     "geometry": [{"lat": 52.2300, "lon": 4.8100}, {"lat": 52.2310, "lon": 4.8250}]},
+    {"type": "way", "id": 7711, "tags": {"highway": "trunk", "lanes": "3"},
+     "geometry": [{"lat": 52.2400, "lon": 4.8100}, {"lat": 52.2410, "lon": 4.8250}]},
+    {"type": "way", "id": 7712, "tags": {"highway": "motorway", "lanes": "2;3"},
+     "geometry": [{"lat": 52.2500, "lon": 4.8100}, {"lat": 52.2510, "lon": 4.8250}]},
+    {"type": "way", "id": 7713, "tags": {"highway": "motorway", "lanes": "wide"},
+     "geometry": [{"lat": 52.2600, "lon": 4.8100}, {"lat": 52.2610, "lon": 4.8250}]},
+    {"type": "node", "id": 1, "lat": 52.0, "lon": 5.0}
+  ]
+}

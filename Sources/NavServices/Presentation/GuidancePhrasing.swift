@@ -73,6 +73,16 @@ public enum GuidancePhrasing {
         }
     }
 
+    /// "向右变道 1 条（1.2 公里内）"
+    public static func laneChange(_ a: LaneChangeAdvice) -> String {
+        "向\(a.direction == .right ? "右" : "左")变道 \(a.lanes) 条（\(distance(DisplayDistance.round(a.within)))内）"
+    }
+
+    /// "左起第 2 条，共 3 条"
+    public static func currentLane(_ e: LaneEstimate) -> String {
+        "左起第 \(e.lane + 1) 条，共 \(e.laneCount) 条"
+    }
+
     /// "19:00 起 130"
     public static func upcomingLimit(_ s: FusedSpeedLimit, calendar: Calendar = DutchRoadRules.amsterdamCalendar) -> String? {
         guard let c = s.upcomingChange else { return nil }

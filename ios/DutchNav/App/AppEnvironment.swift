@@ -2,7 +2,7 @@
 //
 // 组装：读配置 → 建 provider → 建宿主。Info.plist 里的键：
 //   AMapApiKey      高德 key（绑定 bundle id）
-//   NDWRelayURL     NDW 中继地址，例如 https://nav.example.nl/   （不填 = 没有 NDW 事件层，导航照常）
+//   NDWRelayURL     中继地址，例如 https://nav.example.nl/   （不填 = 没有 NDW 事件层和车道定位，导航照常）
 //   OSRMURL         自建 OSRM，例如 https://osrm.example.nl/    （不填 = 不做预算路线）
 
 import AMapNaviKit
@@ -28,12 +28,12 @@ final class AppEnvironment: @unchecked Sendable {
 
         let amapRoutes = AmapRouteProvider()
         let osrm = (info["OSRMURL"] as? String).flatMap(URL.init(string:)).map { OSRMRouteProvider(baseURL: $0) }
-        let ndw = (info["NDWRelayURL"] as? String).flatMap(URL.init(string:))
-            .map { NDWEventFeed(client: NDWRelayClient(baseURL: $0)) }
+        let relay = (info["NDWRelayURL"] as? String).flatMap(URL.init(string:))
+        let ndw = relay.map { NDWEventFeed(client: NDWRelayClient(baseURL: $0)) }
 
         host = NavigationHost(routing: RouteProviderRouter(primary: amapRoutes, secondary: osrm),
                               amapGuidance: AmapGuidanceBridge(routeProvider: amapRoutes),
-                              ndw: ndw, jev: nil)
+                              ndw: ndw, laneCounts: relay.map { LaneCountClient(baseURL: $0) }, jev: nil)
 
         let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         try? FileManager.default.createDirectory(at: support, withIntermediateDirectories: true)

@@ -22,9 +22,18 @@ wegwerkzaamheden（施工，300 s，只保留 24 小时内开始的）、brugope
 ## 接口
 
 ```
-GET /v1/events?bbox=min_lat,min_lon,max_lat,max_lon[&since=N]
+GET /v1/events?bbox=min_lat,min_lon,max_lat,max_lon[&since=N]   NDW 事件（增量）
+GET /v1/lanes?bbox=min_lat,min_lon,max_lat,max_lon              沿途车道数（OSM）
 GET /healthz
 ```
+
+### /v1/lanes
+
+手机端车道定位需要知道每段路有几条车道。中继按 0.25° 瓦片向 Overpass API 查 motorway/trunk（含匝道）上带
+`lanes` 标签的路段，缓存 7 天（`OVERPASS_URL` 可换成自建的 Overpass）。几何按行驶方向排列：
+高速默认单行；`oneway=-1` 反转；双向道路只用 `lanes:forward` / `lanes:backward`，没有就跳过。
+一次最多 200 个瓦片；取不到的瓦片在响应的 `tiles.failed` 里报告。不需要时用 `--no-lanes` 关掉。
+形状见 `contracts/lane-counts.v1.example.json`。OSM 数据 © OpenStreetMap contributors（ODbL）。
 
 响应即 `contracts/ndw-events.v1.example.json` 的形状：
 - 不带 `since`、`since` 太旧（墓碑已清理）、或比当前版本还大（中继重启过）→ `"full": true` 完整快照；

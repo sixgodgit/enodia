@@ -8,6 +8,8 @@ public struct RouteMatch: Sendable, Equatable {
     public var offset: Double
     /// 到路线的横向距离（米）。
     public var lateral: Double
+    /// 带符号的横向距离：在路线行进方向右侧为正。
+    public var signedLateral: Double
     /// GPS 航向与路段方向的夹角；速度太低（航向不可信）时为 nil。
     public var headingDelta: Double?
     public var cost: Double
@@ -111,6 +113,6 @@ public struct RouteMatcher: Sendable {
             }
         }
         return RouteMatch(routeID: route.id, segment: i, offset: offset, lateral: p.distance,
-                          headingDelta: headingDelta, cost: cost)
+                          signedLateral: p.side, headingDelta: headingDelta, cost: cost)
     }
 }

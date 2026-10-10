@@ -1,6 +1,7 @@
 """HTTP 接口（标准库 http.server）。
 
 GET /v1/events?bbox=min_lat,min_lon,max_lat,max_lon[&since=N]   → ndw-events/v1
+GET /v1/lanes?bbox=min_lat,min_lon,max_lat,max_lon              → lane-counts/v1（OSM 车道数）
 GET /healthz                                                    → 版本号与各数据集新鲜度
 """
 
@@ -11,6 +12,7 @@ import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
+from .lanes import LaneService
 from .store import EventStore
 
 
@@ -26,7 +28,7 @@ def parse_bbox(value: str | None) -> tuple[float, float, float, float] | None:
     return (a, b, c, d)
 
 
-def make_handler(store: EventStore) -> type[BaseHTTPRequestHandler]:
+def make_handler(store: EventStore, lanes: LaneService | None = None) -> type[BaseHTTPRequestHandler]:
     class Handler(BaseHTTPRequestHandler):
         server_version = "ndw-relay/0.1"
 
@@ -36,6 +38,15 @@ def make_handler(store: EventStore) -> type[BaseHTTPRequestHandler]:
             if url.path == "/healthz":
                 page = store.query(None, since=store.version)
                 self._json(200, {"ok": True, "version": page["version"], "feeds": page["feeds"]})
+                return
+            if url.path == "/v1/lanes" and lanes is not None:
+                try:
+                    bbox = parse_bbox(qs.get("bbox", [None])[0])
+                    if bbox is None:
+                        raise ValueError("bbox is required")
+                    self._json(200, lanes.query(bbox))
+                except ValueError as e:
+                    self._json(400, {"error": str(e)})
                 return
             if url.path != "/v1/events":
                 self._json(404, {"error": "not found"})
@@ -68,5 +79,6 @@ def make_handler(store: EventStore) -> type[BaseHTTPRequestHandler]:
     return Handler
 
 
-def make_server(store: EventStore, host: str = "127.0.0.1", port: int = 8787) -> ThreadingHTTPServer:
-    return ThreadingHTTPServer((host, port), make_handler(store))
+def make_server(store: EventStore, host: str = "127.0.0.1", port: int = 8787,
+                lanes: LaneService | None = None) -> ThreadingHTTPServer:
+    return ThreadingHTTPServer((host, port), make_handler(store, lanes))

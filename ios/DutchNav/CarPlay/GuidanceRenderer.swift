@@ -65,15 +65,19 @@ final class GuidanceRenderer {
     private func updateManeuvers(_ s: DriveDisplayState) {
         guard let session, let m = s.maneuver else { return }
         // 同一个动作（类型+文字+车道图）只建一次 CPManeuver，之后只刷新距离。
-        let key = "\(s.activeRouteID?.raw ?? "")|\(m.kind)|\(GuidancePhrasing.instruction(m))|\(s.lanes.map { "\($0)" } ?? "")"
+        let marked = CarPlayMapViewController.markedLane(s)
+        let advice = s.laneChange.map(GuidancePhrasing.laneChange)
+        let key = "\(s.activeRouteID?.raw ?? "")|\(m.kind)|\(GuidancePhrasing.instruction(m))|\(s.lanes.map { "\($0)" } ?? "")|\(marked ?? -1)|\(advice ?? "")"
         let estimates = CPTravelEstimates(distanceRemaining: Measurement(value: m.distance, unit: .meters),
                                           timeRemaining: 0)
         if current?.key != key {
             let maneuver = CPManeuver()
-            maneuver.instructionVariants = [GuidancePhrasing.instruction(m)]
+            // 需要变道时把提示放在最前面：卡片上第一眼就看到。
+            maneuver.instructionVariants = [(advice.map { "\($0) · " } ?? "") + GuidancePhrasing.instruction(m),
+                                            GuidancePhrasing.instruction(m)]
             maneuver.symbolImage = ManeuverSymbols.image(for: m.kind)
             maneuver.initialTravelEstimates = estimates
-            if let lanes = s.lanes { maneuver.junctionImage = LaneStripRenderer.image(lanes, height: 44) }
+            if let lanes = s.lanes { maneuver.junctionImage = LaneStripRenderer.image(lanes, height: 44, currentLane: marked) }
             var list = [maneuver]
             if let then = s.thenManeuver {
                 let next = CPManeuver()

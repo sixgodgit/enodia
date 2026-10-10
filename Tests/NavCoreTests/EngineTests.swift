@@ -402,7 +402,8 @@ final class EngineTests: XCTestCase {
         let maneuvers = stride(from: 5_000.0, to: 199_000, by: 5_000).map { Maneuver(offset: $0, kind: .keepRight, roadClass: .motorway) }
         let route = Route(id: "long", points: pts, maneuvers: maneuvers, expectedDuration: 7200,
                           providerSpeedLimits: [ValueSpan(start: 0, end: 200_000, value: 130)],
-                          roadClasses: [ValueSpan(start: 0, end: 200_000, value: .motorway)])
+                          roadClasses: [ValueSpan(start: 0, end: 200_000, value: .motorway)],
+                          laneCounts: [ValueSpan(start: 0, end: 200_000, value: 3)])
         let events = stride(from: 1000, to: 19_000, by: 400).map { i in
             TrafficEvent(id: "e\(i)", kind: .roadworks, geometry: [pts[i], pts[i + 5]])
         }
@@ -420,7 +421,11 @@ final class EngineTests: XCTestCase {
             let fix = LocationFix(coordinate: Coordinate(p.latitude + rng.gaussian(3) / 111_000, p.longitude),
                                   timestamp: World.t0.addingTimeInterval(Double(k + 1)), speed: 30,
                                   course: Geo.bearing(pts[i], pts[i + 1]))
-            let out = engine.process(fix)
+            // 每秒 10 个陀螺仪读数（车道定位路径也算在预算里）。
+            let motion = (1...10).map { j in
+                MotionSample(timestamp: fix.timestamp.addingTimeInterval(-1 + Double(j) * 0.1), headingRate: rng.gaussian(0.1))
+            }
+            let out = engine.process(fix, motion: motion)
             durations.append(Double(out.processingTime.components.attoseconds) / 1e15
                              + Double(out.processingTime.components.seconds) * 1000)
         }
