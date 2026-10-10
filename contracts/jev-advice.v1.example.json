@@ -1,0 +1,37 @@
+[
+  {
+    "id": "jev-7f3a",
+    "trip_id": "trip-2026-10-12-0800",
+    "issued_at": "2026-10-12T08:02:10Z",
+    "valid_until": "2026-10-12T08:10:00Z",
+    "reason": "A10 West: ongeval bij Coentunnel, +18 min",
+    "expected_gain_s": 1080,
+    "action": {"type": "switch_to_alternative", "route_id": "amap-1"}
+  },
+  {
+    "id": "jev-7f3b",
+    "trip_id": "trip-2026-10-12-0800",
+    "issued_at": "2026-10-12T08:03:00Z",
+    "valid_until": "2026-10-12T08:20:00Z",
+    "reason": "Milieuzone Utrecht: diesel Euro 4 niet toegestaan",
+    "action": {
+      "type": "reroute",
+      "preferences": {
+        "avoid_tolls": false,
+        "avoid_ferries": true,
+        "avoid_motorways": false,
+        "avoid_roads": ["A10"],
+        "avoid_areas": [[52.07, 5.09, 52.11, 5.14]],
+        "avoid_environmental_zones": true
+      }
+    }
+  },
+  {
+    "id": "jev-7f3c",
+    "trip_id": "trip-2026-10-12-0800",
+    "issued_at": "2026-10-12T08:04:00Z",
+    "valid_until": "2026-10-12T08:05:00Z",
+    "reason": "",
+    "action": {"type": "keep_current"}
+  }
+]

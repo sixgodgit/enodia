@@ -1,0 +1,59 @@
+{
+  "schema": "ndw-events/v1",
+  "version": 1842,
+  "full": false,
+  "generated_at": "2026-10-12T08:00:05Z",
+  "feeds": {
+    "incidents": {"fetched_at": "2026-10-12T08:00:01Z", "age_s": 4, "stale": false},
+    "roadworks": {"fetched_at": "2026-10-12T07:55:00Z", "age_s": 305, "stale": false}
+  },
+  "events": [
+    {
+      "id": "RWS03_900123_1",
+      "kind": "accident",
+      "severity": "high",
+      "road": "A12",
+      "geometry": [[52.0901, 5.0512], [52.0902, 5.0631]],
+      "closed_lanes": ["lane1", "lane2"],
+      "lanes_restricted": 2,
+      "start": "2026-10-12T07:41:00Z",
+      "end": null,
+      "updated": "2026-10-12T07:58:12Z",
+      "text": "Ongeval op de A12 Den Haag richting Utrecht tussen Woerden en De Meern, 2 rijstroken dicht",
+      "source": "ndw:incidents"
+    },
+    {
+      "id": "NLRWS_WW_445566_1",
+      "kind": "roadworks",
+      "severity": "medium",
+      "road": "A2",
+      "geometry": [[52.3012, 4.9534], [52.2833, 4.9661], [52.2601, 4.9801]],
+      "closed_lanes": ["hardShoulder"],
+      "lanes_restricted": null,
+      "start": "2026-10-11T20:00:00.000Z",
+      "end": "2026-10-13T05:00:00Z",
+      "updated": "2026-10-11T19:30:00Z",
+      "text": "Werkzaamheden, vluchtstrook afgesloten",
+      "source": "ndw:roadworks"
+    },
+    {
+      "id": "BRUG_0451_20261012T0805",
+      "kind": "bridge_opening",
+      "severity": "medium",
+      "road": "N201",
+      "geometry": [[52.2312, 4.8301]],
+      "closed_lanes": [],
+      "start": "2026-10-12T08:05:00Z",
+      "end": "2026-10-12T08:12:00Z",
+      "text": "Brugopening",
+      "source": "ndw:bridges"
+    },
+    {
+      "id": "FUTURE_TYPE_1",
+      "kind": "some_future_kind",
+      "geometry": [[52.0, 5.0]],
+      "source": "ndw:incidents"
+    }
+  ],
+  "removed": ["RWS03_899001_1"]
+}

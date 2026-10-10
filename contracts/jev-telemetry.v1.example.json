@@ -1,0 +1,14 @@
+{
+  "trip_id": "trip-2026-10-12-0800",
+  "at": "2026-10-12T08:02:00Z",
+  "position": [52.3801, 4.8402],
+  "speed_kmh": 96,
+  "phase": "guiding",
+  "active_route": {"id": "amap-0", "length_m": 41250.5, "expected_duration_s": 2460},
+  "alternatives": [
+    {"id": "amap-1", "length_m": 44010.0, "expected_duration_s": 2580}
+  ],
+  "remaining_m": 38110.2,
+  "remaining_s": 2280,
+  "events_ahead": ["RWS03_900123_1"]
+}

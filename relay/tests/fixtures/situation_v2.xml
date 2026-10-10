@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 按 DATEX II v2.3 + NDW 扩展的结构手工构造的样例（不是真实下载的数据）。 -->
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+<SOAP-ENV:Body>
+<d2LogicalModel xmlns="http://datex2.eu/schema/2/2_0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" modelBaseVersion="2">
+  <exchange><supplierIdentification><country>nl</country><nationalIdentifier>NLNDW</nationalIdentifier></supplierIdentification></exchange>
+  <payloadPublication xsi:type="SituationPublication" lang="nl">
+    <publicationTime>2026-10-12T08:00:00Z</publicationTime>
+
+    <situation id="RWS03_900123" version="3">
+      <overallSeverity>high</overallSeverity>
+      <situationVersionTime>2026-10-12T07:58:12Z</situationVersionTime>
+      <situationRecord xsi:type="Accident" id="RWS03_900123_1" version="3">
+        <situationRecordCreationTime>2026-10-12T07:41:00Z</situationRecordCreationTime>
+        <situationRecordVersionTime>2026-10-12T07:58:12.123Z</situationRecordVersionTime>
+        <probabilityOfOccurrence>certain</probabilityOfOccurrence>
+        <validity>
+          <validityStatus>active</validityStatus>
+          <validityTimeSpecification><overallStartTime>2026-10-12T07:41:00Z</overallStartTime></validityTimeSpecification>
+        </validity>
+        <impact>
+          <impactDetails><numberOfLanesRestricted>2</numberOfLanesRestricted></impactDetails>
+        </impact>
+        <generalPublicComment><comment><values>
+          <value lang="en">Accident on the A12</value>
+          <value lang="nl">Ongeval op de A12, 2 rijstroken dicht</value>
+        </values></comment></generalPublicComment>
+        <groupOfLocations xsi:type="Linear">
+          <locationForDisplay><latitude>52.09015</latitude><longitude>5.05700</longitude></locationForDisplay>
+          <supplementaryPositionalDescription>
+            <affectedCarriagewayAndLanes>
+              <carriageway>mainCarriageway</carriageway>
+              <lane>lane1</lane>
+              <lane>lane2</lane>
+            </affectedCarriagewayAndLanes>
+          </supplementaryPositionalDescription>
+          <alertCLinear xsi:type="AlertCMethod4Linear">
+            <alertCDirection><alertCDirectionCoded>positive</alertCDirectionCoded></alertCDirection>
+          </alertCLinear>
+          <linearExtension><linearByCoordinatesExtension>
+            <linearCoordinatesStartPoint><pointCoordinates><latitude>52.09010</latitude><longitude>5.05120</longitude></pointCoordinates></linearCoordinatesStartPoint>
+            <linearCoordinatesEndPoint><pointCoordinates><latitude>52.09020</latitude><longitude>5.06310</longitude></pointCoordinates></linearCoordinatesEndPoint>
+          </linearByCoordinatesExtension></linearExtension>
+          <roadNumber>A 12</roadNumber>
+        </groupOfLocations>
+        <accidentType>accident</accidentType>
+      </situationRecord>
+    </situation>
+
+    <situation id="NLRWS_WW_1" version="1">
+      <overallSeverity>medium</overallSeverity>
+      <situationRecord xsi:type="MaintenanceWorks" id="NLRWS_WW_1_works" version="1">
+        <situationRecordVersionTime>2026-10-11T19:30:00Z</situationRecordVersionTime>
+        <validity><validityStatus>definedByValidityTimeSpec</validityStatus>
+          <validityTimeSpecification>
+            <overallStartTime>2026-10-11T20:00:00Z</overallStartTime>
+            <overallEndTime>2026-10-13T05:00:00Z</overallEndTime>
+          </validityTimeSpecification>
+        </validity>
+        <groupOfLocations xsi:type="Linear">
+          <linearExtension><linearByCoordinatesExtension>
+            <linearCoordinatesStartPoint><pointCoordinates><latitude>52.30120</latitude><longitude>4.95340</longitude></pointCoordinates></linearCoordinatesStartPoint>
+            <linearCoordinatesEndPoint><pointCoordinates><latitude>52.26010</latitude><longitude>4.98010</longitude></pointCoordinates></linearCoordinatesEndPoint>
+          </linearByCoordinatesExtension></linearExtension>
+        </groupOfLocations>
+        <roadMaintenanceType>roadworks</roadMaintenanceType>
+      </situationRecord>
+      <situationRecord xsi:type="RoadOrCarriagewayOrLaneManagement" id="NLRWS_WW_1_closure" version="1">
+        <validity><validityStatus>active</validityStatus>
+          <validityTimeSpecification><overallStartTime>2026-10-11T20:00:00Z</overallStartTime></validityTimeSpecification>
+        </validity>
+        <groupOfLocations xsi:type="Linear">
+          <linearExtension><linearByCoordinatesExtension>
+            <linearCoordinatesStartPoint><pointCoordinates><latitude>52.30120</latitude><longitude>4.95340</longitude></pointCoordinates></linearCoordinatesStartPoint>
+            <linearCoordinatesEndPoint><pointCoordinates><latitude>52.26010</latitude><longitude>4.98010</longitude></pointCoordinates></linearCoordinatesEndPoint>
+          </linearByCoordinatesExtension></linearExtension>
+        </groupOfLocations>
+        <roadOrCarriagewayOrLaneManagementType>roadClosed</roadOrCarriagewayOrLaneManagementType>
+      </situationRecord>
+    </situation>
+
+    <situation id="SPITS_1" version="7">
+      <situationRecord xsi:type="RoadOrCarriagewayOrLaneManagement" id="SPITS_1_a" version="7">
+        <validity><validityStatus>active</validityStatus></validity>
+        <groupOfLocations xsi:type="Point">
+          <locationForDisplay><latitude>52.1000</latitude><longitude>4.6000</longitude></locationForDisplay>
+          <supplementaryPositionalDescription><affectedCarriagewayAndLanes>
+            <lane>rushHourLane</lane>
+          </affectedCarriagewayAndLanes></supplementaryPositionalDescription>
+        </groupOfLocations>
+        <roadOrCarriagewayOrLaneManagementType>laneClosures</roadOrCarriagewayOrLaneManagementType>
+      </situationRecord>
+      <situationRecord xsi:type="RoadOrCarriagewayOrLaneManagement" id="SPITS_1_suspended" version="7">
+        <validity><validityStatus>suspended</validityStatus></validity>
+        <groupOfLocations xsi:type="Point">
+          <locationForDisplay><latitude>52.1000</latitude><longitude>4.6000</longitude></locationForDisplay>
+        </groupOfLocations>
+        <roadOrCarriagewayOrLaneManagementType>laneClosures</roadOrCarriagewayOrLaneManagementType>
+      </situationRecord>
+    </situation>
+
+    <situation id="BRUG_0451" version="1">
+      <situationRecord xsi:type="GeneralNetworkManagement" id="BRUG_0451_1" version="1">
+        <validity><validityStatus>active</validityStatus>
+          <validityTimeSpecification>
+            <overallStartTime>2026-10-12T08:05:00Z</overallStartTime>
+            <overallEndTime>2026-10-12T08:12:00Z</overallEndTime>
+          </validityTimeSpecification>
+        </validity>
+        <groupOfLocations xsi:type="Point">
+          <pointByCoordinates><pointCoordinates><latitude>52.2312</latitude><longitude>4.8301</longitude></pointCoordinates></pointByCoordinates>
+        </groupOfLocations>
+        <generalNetworkManagementType>bridgeSwingInOperation</generalNetworkManagementType>
+      </situationRecord>
+    </situation>
+
+    <situation id="NOGEO" version="1">
+      <situationRecord xsi:type="Accident" id="NOGEO_1" version="1">
+        <validity><validityStatus>active</validityStatus></validity>
+      </situationRecord>
+    </situation>
+
+    <situation id="NEW" version="1">
+      <situationRecord xsi:type="SomethingIntroducedLater" id="NEW_1" version="1">
+        <validity><validityStatus>active</validityStatus></validity>
+        <groupOfLocations xsi:type="Point">
+          <locationForDisplay><latitude>51.9</latitude><longitude>4.4</longitude></locationForDisplay>
+        </groupOfLocations>
+      </situationRecord>
+    </situation>
+  </payloadPublication>
+</d2LogicalModel>
+</SOAP-ENV:Body>
+</SOAP-ENV:Envelope>

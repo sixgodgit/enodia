@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 按 DATEX II v3 结构手工构造的样例（不是真实下载的数据）。 -->
+<mc:messageContainer xmlns:mc="http://datex2.eu/schema/3/messageContainer"
+    xmlns:sit="http://datex2.eu/schema/3/situation"
+    xmlns:loc="http://datex2.eu/schema/3/locationReferencing"
+    xmlns:com="http://datex2.eu/schema/3/common"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" modelBaseVersion="3">
+  <mc:payload xsi:type="sit:SituationPublication" lang="nl" modelBaseVersion="3">
+    <com:publicationTime>2026-10-12T08:00:00Z</com:publicationTime>
+    <sit:situation id="NDW_V3_77" version="2">
+      <sit:overallSeverity>low</sit:overallSeverity>
+      <sit:situationRecord xsi:type="sit:MaintenanceWorks" id="NDW_V3_77_1" version="2">
+        <sit:situationRecordCreationTime>2026-10-10T06:00:00Z</sit:situationRecordCreationTime>
+        <sit:situationRecordVersionTime>2026-10-12T06:00:00+02:00</sit:situationRecordVersionTime>
+        <sit:validity>
+          <com:validityStatus>definedByValidityTimeSpec</com:validityStatus>
+          <com:validityTimeSpecification>
+            <com:overallStartTime>2026-10-12T06:00:00+02:00</com:overallStartTime>
+            <com:overallEndTime>2026-10-12T18:00:00+02:00</com:overallEndTime>
+          </com:validityTimeSpecification>
+        </sit:validity>
+        <sit:generalPublicComment><sit:comment><com:values>
+          <com:value lang="nl">Werkzaamheden N201, rechterrijstrook afgesloten</com:value>
+        </com:values></sit:comment></sit:generalPublicComment>
+        <sit:locationReference xsi:type="loc:SingleRoadLinearLocation">
+          <loc:supplementaryPositionalDescription>
+            <loc:carriageway>
+              <loc:carriageway>mainCarriageway</loc:carriageway>
+              <loc:lane><loc:laneNumber>2</loc:laneNumber><loc:laneUsage>normal</loc:laneUsage></loc:lane>
+            </loc:carriageway>
+          </loc:supplementaryPositionalDescription>
+          <loc:roadInformation><loc:roadNumber>N201</loc:roadNumber></loc:roadInformation>
+          <loc:coordinatesForDisplay><loc:latitude>52.2300</loc:latitude><loc:longitude>4.8200</loc:longitude></loc:coordinatesForDisplay>
+          <loc:gmlLineString srsName="EPSG:4326">
+            <loc:posList>52.2310 4.8100 52.2305 4.8150 52.2305 4.8150 52.2300 4.8250</loc:posList>
+          </loc:gmlLineString>
+        </sit:locationReference>
+        <sit:roadMaintenanceType>roadworks</sit:roadMaintenanceType>
+      </sit:situationRecord>
+      <sit:situationRecord xsi:type="sit:VehicleObstruction" id="NDW_V3_77_2" version="1">
+        <sit:validity><com:validityStatus>active</com:validityStatus></sit:validity>
+        <sit:locationReference xsi:type="loc:PointLocation">
+          <loc:pointByCoordinates><loc:pointCoordinates><loc:latitude>52.2100</loc:latitude><loc:longitude>4.8000</loc:longitude></loc:pointCoordinates></loc:pointByCoordinates>
+        </sit:locationReference>
+        <sit:vehicleObstructionType>brokenDownVehicle</sit:vehicleObstructionType>
+      </sit:situationRecord>
+    </sit:situation>
+  </mc:payload>
+</mc:messageContainer>
